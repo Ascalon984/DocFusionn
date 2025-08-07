@@ -1,5 +1,6 @@
 
-# DocMaster System Flowchart & Detailed Feature Workflow (Mermaid)
+
+# DocMaster System Flowchart & Detailed Feature Workflows (Mermaid)
 
 ## 1. System Architecture Overview
 
@@ -20,148 +21,106 @@ flowchart TD
 
 ---
 
-## 2. Feature Workflows
+## 2. Feature Workflows (Detail)
 
-### 2.1. Document Upload & Parsing
-
+### 2.1. Document Translation
 ```mermaid
 sequenceDiagram
     participant User
     participant Frontend as DocMaster.html
     participant MainAPI as main.py
-    User->>Frontend: Upload file (docx/pdf/doc)
-    Frontend->>MainAPI: POST /api/parse (file in base64)
-    MainAPI->>MainAPI: Parse file (mammoth, PyPDF2, textract)
-    MainAPI-->>Frontend: Parsed text/content
-    Frontend-->>User: Display document content
-```
-
-### 2.2. AI Document Processing (Auto-format, Typo Fix, Capitalize, Tab, etc)
-
-```mermaid
-sequenceDiagram
-    User->>Frontend: Click AI processing (e.g., Auto-format)
-    Frontend->>MainAPI: POST /api/format (text, mode)
-    MainAPI->>MainAPI: Process with HuggingFace/Mistral API
-    MainAPI-->>Frontend: Formatted text
-    Frontend-->>User: Show formatted result
-```
-
-### 2.3. Translation
-
-```mermaid
-sequenceDiagram
-    User->>Frontend: Select Translate
+    User->>Frontend: Pilih menu Translate, masukkan/unggah dokumen
     Frontend->>MainAPI: POST /api/translate (text, src, dest)
-    MainAPI->>MainAPI: Use Googletrans or Mistral API
-    MainAPI-->>Frontend: Translated text
-    Frontend-->>User: Show translation
+    MainAPI->>MainAPI: Validasi bahasa, potong teks jika panjang
+    MainAPI->>MainAPI: Proses Googletrans/Mistral API (jika gagal fallback)
+    MainAPI-->>Frontend: Kirim hasil terjemahan
+    Frontend-->>User: Tampilkan hasil translate
 ```
 
-### 2.4. Plagiarism/Similarity Check
-
+### 2.2. Format Cleaning (Auto-format, Fix Typo, Capitalize, Tab, Spacing)
 ```mermaid
 sequenceDiagram
-    User->>Frontend: Click Plagiarism Check
-    Frontend->>MainAPI: POST /api/similarity (text1, text2)
-    MainAPI->>MainAPI: Use SentenceTransformer (MiniLM)
-    MainAPI-->>Frontend: Similarity score
-    Frontend-->>User: Show similarity result
+    participant User
+    participant Frontend as DocMaster.html
+    participant MainAPI as main.py
+    User->>Frontend: Pilih menu Format (Auto-format/Fix Typo/Capitalize/Tab/Spacing)
+    Frontend->>MainAPI: POST /api/format (text, mode)
+    MainAPI->>MainAPI: Pilih mode, potong teks jadi chunk
+    MainAPI->>MainAPI: Proses dengan HuggingFace/Mistral API atau regex (untuk spacing)
+    MainAPI-->>Frontend: Kirim hasil format
+    Frontend-->>User: Tampilkan hasil pembersihan format
 ```
 
-### 2.5. AI Detection (Is this text AI-generated?)
-
+### 2.3. AI Content Detection (Deteksi Konten AI)
 ```mermaid
 sequenceDiagram
-    User->>Frontend: Click AI Detection
+    participant User
+    participant Frontend as DocMaster.html
+    participant MainAPI as main.py
+    User->>Frontend: Pilih menu Deteksi AI
     Frontend->>MainAPI: POST /api/ai-detect (text)
-    MainAPI->>MainAPI: Use Roberta, GLTR, Perplexity, IndoBERT
-    MainAPI-->>Frontend: AI probability & details
-    Frontend-->>User: Show AI detection result
+    MainAPI->>MainAPI: Deteksi bahasa (langdetect)
+    MainAPI->>MainAPI: Proses pipeline Roberta, GLTR, Perplexity, IndoBERT
+    MainAPI->>MainAPI: Analisis chunk, hitung skor AI
+    MainAPI-->>Frontend: Kirim hasil deteksi (probabilitas, detail chunk)
+    Frontend-->>User: Tampilkan hasil deteksi AI
 ```
 
-### 2.6. Reference Parsing & Formatting
-
+### 2.4. AI Assistant (Chatbot)
 ```mermaid
 sequenceDiagram
-    User->>Frontend: Upload reference file (RIS/BibTeX/Word)
-    Frontend->>MainAPI: POST /api/parse-reference (file, ext)
-    MainAPI->>MainAPI: Parse with rispy/bibtexparser/mammoth/AI
-    MainAPI-->>Frontend: Parsed references (JSON)
-    Frontend->>MainAPI: POST /api/format-reference (ref, style)
-    MainAPI-->>Frontend: Formatted citation
-    Frontend-->>User: Show formatted reference
-```
-
-### 2.7. Page Numbering
-
-```mermaid
-sequenceDiagram
-    User->>Frontend: Select page numbering options
-    Frontend->>MainAPI: POST /api/numbering (file, type, from, to, position)
-    MainAPI->>MainAPI: Process with python-docx
-    MainAPI-->>Frontend: Preview numbered doc
-    Frontend-->>User: Show preview/download
-```
-
-### 2.8. Chatbot (AI Assistant)
-
-```mermaid
-sequenceDiagram
-    User->>Frontend: Open Chatbot, send message
+    participant User
+    participant Frontend as DocMaster.html
+    participant MainAPI as main.py
+    User->>Frontend: Buka Chatbot, kirim pesan
     Frontend->>MainAPI: POST /api/chat (history)
-    MainAPI->>MainAPI: Use Llama/Mistral API
-    MainAPI-->>Frontend: AI reply
-    Frontend-->>User: Show chat response
-```
-
-### 2.9. Feature Access Control (Premium/Token)
-
-```mermaid
-sequenceDiagram
-    User->>Frontend: Try to use premium feature
-    Frontend->>MainAPI: POST /api/feature/access (email, feature)
-    MainAPI->>AdminAPI: GET user info (by email)
-    alt Premium user
-        AdminAPI-->>MainAPI: subscription_type = premium
-        MainAPI-->>Frontend: allowed: true
-    else Non-premium user
-        AdminAPI-->>MainAPI: tokens > 0 ?
-        alt Token available
-            MainAPI->>AdminAPI: update tokens -1
-            MainAPI-->>Frontend: allowed: true
-        else No token
-            MainAPI-->>Frontend: allowed: false, reason: Token habis
-        end
-    end
-    Frontend-->>User: Show access result
-```
-
-### 2.10. Admin Panel (Monitoring, Analytics, Transactions)
-
-```mermaid
-sequenceDiagram
-    Admin->>Frontend: Login as admin
-    Frontend->>AdminAPI: POST /api/admin/check-access (email)
-    AdminAPI-->>Frontend: is_admin: true/false
-    Frontend->>AdminAPI: GET /api/admin/dashboard
-    AdminAPI-->>Frontend: Metrics, recent users, transactions
-    Frontend-->>Admin: Show dashboard, analytics, export, etc
+    MainAPI->>MainAPI: Format prompt, panggil Llama/Mistral API
+    MainAPI-->>Frontend: Kirim balasan AI
+    Frontend-->>User: Tampilkan balasan chatbot
 ```
 
 ---
 
-## 3. Notes
-- All API endpoints are handled by `main.py` (user features) and `admin_backend.py` (admin features).
-- Database operations (user, token, subscription, analytics, transactions) are managed by `admin_backend.py` and stored in `docmaster_admin.db`.
-- AI/ML features use HuggingFace, OpenRouter (Mistral/Llama), and other Python libraries.
-- The frontend (`DocMaster.html`) interacts with both backends via REST API.
-- Feature access is controlled by premium status or token count.
-- Admin panel provides real-time monitoring, analytics, and data export.
+## 3. Penjelasan Detail Fitur
+
+### Translate Dokumen
+- Mendukung input teks langsung atau file dokumen (docx/pdf/doc, diubah ke teks dulu)
+- Menggunakan Googletrans (gratis) atau fallback ke Mistral API jika error/limit
+- Memotong teks panjang menjadi bagian kecil agar tidak error
+- Mendukung banyak bahasa (id, en, ja, zh, ar, es, fr, de, ru, ko, it, pt)
+
+### Pembersihan Format (Auto-format, Typo, Kapital, Tab, Spasi)
+- Mode auto-format: merapikan struktur dokumen, heading, spasi, indentasi, ejaan
+- Mode fix typo: memperbaiki typo/ejaan (bahasa Inggris: LanguageTool, lain: Mistral)
+- Mode capitalize/tab: kapitalisasi awal kalimat/tab otomatis (Mistral)
+- Mode fix spacing: regex untuk menghapus spasi berlebih
+- Semua mode memotong teks panjang menjadi chunk agar efisien
+
+### Deteksi Konten AI
+- Deteksi apakah teks hasil AI (ChatGPT, Llama, dsb) atau manusia
+- Menggunakan pipeline Roberta, GLTR, Perplexity, IndoBERT (khusus Indonesia)
+- Analisis per chunk, hasil berupa probabilitas dan highlight bagian AI
+- Mendukung deteksi otomatis bahasa (langdetect)
+
+### AI Assistant (Chatbot)
+- Chatbot profesional dokumen, gaya ramah, bisa emoji
+- Menggunakan Llama/Mistral API via OpenRouter
+- Mendukung riwayat chat (history) untuk konteks
+- Balasan AI diformat agar mudah dibaca, tidak pakai markdown
 
 ---
 
-> **How to use:**
-> - Place this file in your repository (e.g., `DocMaster_Flowchart.md`).
-> - View on GitHub or any Mermaid-compatible Markdown viewer for rendered diagrams.
-> - Update as new features are added.
+## 4. Catatan
+- Semua endpoint API di-handle oleh `main.py` (fitur user) dan `admin_backend.py` (fitur admin)
+- Operasi database (user, token, subscription, analytics, transaksi) dikelola oleh `admin_backend.py` dan disimpan di `docmaster_admin.db`
+- Fitur AI/ML memakai HuggingFace, OpenRouter (Mistral/Llama), dan library Python lain
+- Frontend (`DocMaster.html`) berinteraksi dengan backend via REST API
+- Kontrol akses fitur berdasarkan status premium/token
+- Panel admin menyediakan monitoring real-time, analytics, dan ekspor data
+
+---
+
+> **Cara pakai:**
+> - Simpan file ini di repo Anda (misal: `DocMaster_Flowchart.md`)
+> - Lihat di GitHub atau Markdown viewer yang support Mermaid untuk diagram
+> - Update jika ada fitur baru
